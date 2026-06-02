@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ordem Paranormal - Sistema de Campanha</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,500&family=Oswald:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #050505;
+            font-family: 'Oswald', sans-serif;
+            color: #e5e5e5;
+        }
+
+        /* Ambient Canvas Particles */
+        #particleCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Screen States */
+        .screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.8s ease, visibility 0.8s ease;
+            background-color: #050505;
+        }
+
+        .screen.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* 1. LOADING SCREEN */
+        #loading-screen {
+            z-index: 100;
+            background: radial-gradient(circle, #150000 0%, #050505 100%);
+        }
+
+        .occult-sigil {
+            width: 150px;
+            height: 150px;
+            border: 2px dashed #ff0000;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            animation: spin 12s linear infinite;
+            box-shadow: 0 0 25px rgba(255, 0, 0, 0.4);
+            margin-bottom: 30px;
+        }
+
+        .occult-sigil::before {
+            content: '';
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            border: 1px solid #ff3333;
+            transform: rotate(45deg);
+        }
+
+        .occult-sigil::after {
+            content: '汎';
+            font-size: 2rem;
+            color: #ff0000;
+            animation: counter-spin 12s linear infinite;
+            text-shadow: 0 0 10px #ff0000;
+        }
+
+        .loading-text {
+            font-family: 'Special Elite', monospace;
+            color: #ff3333;
+            font-size: 1.2rem;
+            letter-spacing: 2px;
+            text-align: center;
+            height: 30px;
+            text-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+        }
+
+        .progress-bar-container {
+            width: 300px;
+            height: 4px;
+            background-color: #1a1a1a;
+            margin-top: 20px;
+            border-radius: 2px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 0, 0, 0.2);
+        }
+
+        .progress-bar {
+            width: 0%;
+            height: 100%;
+            background-color: #ff0000;
+            box-shadow: 0 0 10px #ff0000;
+            transition: width 0.1s linear;
+        }
+
+        /* 2. INTRO VIDEO SCREEN */
+        #intro-screen {
+            z-index: 90;
+        }
+
+        .video-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.7;
+        }
+
+        .video-fallback {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(0,0,0,0.8), rgba(15,0,0,0.9)), url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23050505"/><path d="M0 0 L100 100 M100 0 L0 100" stroke="%231a0000" stroke-width="1"/></svg>');
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .video-fallback h2 {
+            font-size: 2.5rem;
+            color: #cc0000;
+            letter-spacing: 4px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 15px rgba(255,0,0,0.6);
+        }
+
+        .video-fallback p {
+            font-family: 'Cormorant Garamond', serif;
+            font-style: italic;
+            font-size: 1.4rem;
+            color: #8a8a8a;
+        }
+
+        .skip-btn {
+            position: absolute;
+            bottom: 50px;
+            right: 50px;
+            background: rgba(0,0,0,0.6);
+            border: 1px solid #ff3333;
+            color: #ff3333;
+            padding: 12px 30px;
+            font-size: 1.1rem;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 95;
+            font-family: 'Oswald', sans-serif;
+            text-transform: uppercase;
+        }
+
+        .skip-btn:hover {
+            background: #ff0000;
+            color: #fff;
+            box-shadow: 0 0 15px #ff0000;
+            text-shadow: 0 0 5px #000;
+        }
+
+        /* 3. START SCREEN */
+        #start-screen {
+            background: linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.9)), radial-gradient(circle, rgba(139,0,0,0.15) 0%, rgba(5,5,5,1) 80%);
+            z-index: 80;
+        }
+
+        .game-title {
+            font-size: 5rem;
+            letter-spacing: 8px;
+            color: #ffffff;
+            text-shadow: 0 0 10px rgba(255,255,255,0.1), 3px 3px 0px #ff0000, -3px -3px 0px #000;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            font-weight: 700;
+            text-align: center;
+            animation: title-pulse 3s infinite alternate;
+        }
+
+        .game-subtitle {
+            font-family: 'Special Elite', monospace;
+            color: #cc0000;
+            font-size: 1.3rem;
+            letter-spacing: 6px;
+            margin-bottom: 80px;
+            text-transform: uppercase;
+        }
+
+        .btn-iniciar {
+            background: transparent;
+            border: 2px solid #ffffff;
+            color: #ffffff;
+            padding: 16px 60px;
+            font-size: 1.8rem;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            box-shadow: 0 0 0 rgba(255,0,0,0);
+        }
+
+        .btn-iniciar::before {
+            content: '';
+            position: absolute;
+            top: -2px; left: -2px; right: -2px; bottom: -2px;
+            border: 2px solid #ff0000;
+            z-index: -1;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .btn-iniciar:hover {
+            color: #ff3333;
+            border-color: #ff3333;
+            letter-spacing: 6px;
+            text-shadow: 0 0 8px rgba(255,0,0,0.6);
+            box-shadow: 0 0 25px rgba(255, 0, 0, 0.3);
+            transform: scale(1.03);
+        }
+
+        .btn-iniciar:hover::before {
+            opacity: 1;
+            transform: scale(1.08);
+        }
+
+        /* 4. CHARACTER SELECTION SCREEN */
+        #char-selection-screen {
+            background: #080808;
+            justify-content: flex-start;
+            padding: 40px 20px;
+            overflow-y: auto;
+        }
+
+        .selection-title {
+            font-size: 2.5rem;
+            letter-spacing: 3px;
+            color: #ffffff;
+            text-transform: uppercase;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #ff0000;
+            padding-bottom: 10px;
+            width: 80%;
+            text-align: center;
+            max-width: 1000px;
+            text-shadow: 0 0 10px rgba(255,0,0,0.4);
+        }
+
+        .cards-container {
+            display: flex;
+            justify-content: center;
+            gap: 25px;
+            width: 100%;
+            max-width: 1200px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+
+        .char-card {
+            background: linear-gradient(135deg, #121212 0%, #080808 100%);
+            border: 1px solid #222;
+            width: 340px;
+            height: 520px;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+        }
+
+        .char-card:hover {
+            border-color: #ff3333;
+            transform: translateY(-8px);
+            box-shadow: 0 12px 30px rgba(255,0,0,0.15);
+        }
+
+        .char-card.selected {
+            border: 2px solid #ff0000;
+            box-shadow: 0 0 30px rgba(255,0,0,0.3);
+            background: linear-gradient(135deg, #1c0505 0%, #080808 100%);
+        }
+
+        .char-img-wrapper {
+            width: 100%;
+            height: 240px;
+            background-color: #151515;
+            position: relative;
+            overflow: hidden;
+            border-bottom: 1px solid #222;
+        }
+
+        .char-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: top center;
+            transition: transform 0.5s ease;
+            opacity: 0.85;
+            position: relative;
+            z-index: 2;
+        }
+
+        .char-card:hover .char-img {
+            transform: scale(1.05);
+            opacity: 1;
+        }
+
+        .char-info {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+
+        .char-name {
+            font-size: 1.8rem;
+            color: #ffffff;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+            transition: color 0.3s ease;
+        }
+
+        .char-card.selected .char-name, .char-card:hover .char-name {
+            color: #ff3333;
+        }
+
+        .char-quote {
+            font-family: 'Cormorant Garamond', serif;
+            font-style: italic;
+            font-size: 1rem;
+            color: #a0a0a0;
+            margin-bottom: 15px;
+            line-height: 1.2;
+            height: 38px;
+            overflow: hidden;
+        }
+
+        .attributes-preview {
+            display: flex;
+            justify-content: space-between;
+            background: rgba(0,0,0,0.4);
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #1a1a1a;
+            margin-bottom: 15px;
+        }
+
+        .attr-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 18%;
+        }
+
+        .attr-label {
+            font-size: 0.75rem;
+            color: #777;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .attr-val {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #fff;
+            margin-top: 2px;
+        }
+
+        .char-card.selected .attr-val {
+            color: #ff5555;
+        }
+
+        .char-summary {
+            font-size: 0.85rem;
+            color: #b0b0b0;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            height: 65px;
+        }
+
+        .ability-tag {
+            border-left: 2px solid #cc0000;
+            padding-left: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .confirm-selection-btn {
+            background: #ff0000;
+            color: white;
+            border: none;
+            padding: 14px 50px;
+            font-size: 1.4rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            font-family: 'Oswald', sans-serif;
+            transition: all 0.3s ease;
+            opacity: 0.5;
+            pointer-events: none;
+            box-shadow: 0 4px 15px rgba(255,0,0,0.2);
+            margin-top: 10px;
+        }
+
+        .confirm-selection-btn.ready {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .confirm-selection-btn.ready:hover {
+            background: #ff2222;
+            box-shadow: 0 0 25px rgba(255,0,0,0.5);
+            letter-spacing: 3px;
+        }
+
+        /* 5. MAIN MENU SCREEN */
+        #main-menu-screen {
+            background: linear-gradient(rgba(5,5,5,0.9), rgba(5,5,5,0.95)), url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60"><rect width="60" height="60" fill="none" stroke="%23111" stroke-width="1"/></svg>');
+            flex-direction: row;
+            justify-content: space-around;
+            align-items: center;
+            padding: 40px;
+        }
+
+        .menu-layout {
+            display: flex;
+            width: 100%;
+            max-width: 1200px;
+            height: 85%;
+            gap: 40px;
+        }
+
+        .menu-options-panel {
+            width: 40%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .menu-btn {
+            background: rgba(15,15,15,0.8);
+            border-left: 4px solid #333;
+            border-top: 1px solid #222;
+            border-bottom: 1px solid #222;
+            border-right: 1px solid #222;
+            color: #aaa;
+            padding: 18px 30px;
+            font-size: 1.5rem;
+            text-align: left;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Oswald', sans-serif;
+        }
+
+        .menu-btn:hover {
+            border-left-color: #ff0000;
+            background: rgba(40,5,5,0.6);
+            color: #fff;
+            padding-left: 40px;
+            text-shadow: 0 0 8px rgba(255,0,0,0.5);
+        }
+
+        .menu-btn.active-tab {
+            border-left-color: #ff0000;
+            background: rgba(30,0,0,0.4);
+            color: #ff3333;
+        }
+
+        .menu-dashboard-panel {
+            width: 60%;
+            background: rgba(10,10,10,0.95);
+            border: 1px solid #252525;
+            border-radius: 4px;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.8);
+        }
+
+        .menu-dashboard-panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 3px;
+            background: #ff0000;
+            box-shadow: 0 0 10px #ff0000;
+        }
+
+        .dashboard-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            border-bottom: 1px solid #222;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+
+        .dashboard-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 4px;
+            border: 1px solid #ff3333;
+            object-fit: cover;
+            object-position: top center;
+            background: #111;
+        }
+
+        .dashboard-title-info h2 {
+            font-size: 2.2rem;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            line-height: 1.1;
+        }
+
+        .dashboard-title-info p {
+            font-family: 'Special Elite', monospace;
+            color: #ff3333;
+            font-size: 0.95rem;
+            margin-top: 4px;
+        }
+
+        .dashboard-content {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .dashboard-content::-webkit-scrollbar, #char-selection-screen::-webkit-scrollbar {
+            width: 6px;
+        }
+        .dashboard-content::-webkit-scrollbar-track, #char-selection-screen::-webkit-scrollbar-track {
+            background: #080808;
+        }
+        .dashboard-content::-webkit-scrollbar-thumb, #char-selection-screen::-webkit-scrollbar-thumb {
+            background: #222;
+            border-radius: 3px;
+        }
+        .dashboard-content::-webkit-scrollbar-thumb:hover, #char-selection-screen::-webkit-scrollbar-thumb:hover {
+            background: #ff0000;
+        }
+
+        .dash-section-title {
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #777;
+            margin-bottom: 12px;
+            border-left: 2px solid #ff0000;
+            padding-left: 8px;
+        }
+
+        .dash-attributes-grid {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .dash-attr-box {
+            flex: 1;
+            background: #141414;
+            border: 1px solid #222;
+            padding: 12px;
+            text-align: center;
+            border-radius: 4px;
+            position: relative;
+        }
+
+        .dash-attr-box .num {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #ff3333;
+            display: block;
+            line-height: 1.1;
+        }
+
+        .dash-attr-box .label {
+            font-size: 0.8rem;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .ability-detail-card {
+            background: rgba(20,20,20,0.6);
+            border: 1px solid #1c1c1c;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+
+        .ability-detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .ability-detail-name {
+            font-size: 1.2rem;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .ability-detail-cost {
+            font-family: 'Special Elite', monospace;
+            font-size: 0.9rem;
+            color: #ff3333;
+            background: rgba(255,0,0,0.1);
+            padding: 2px 8px;
+            border-radius: 3px;
+            border: 1px solid rgba(255,0,0,0.2);
+        }
+
+        .ability-detail-desc {
+            font-size: 0.95rem;
+            color: #b5b5b5;
+            line-height: 1.4;
+        }
+
+        /* ESTILOS ADICIONAIS PARA AS ABAS E INPUTS */
+        .aba { display: none; }
+        .aba.ativa { display: block; }
+        
+        .adicionar-caixa {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            background: rgba(20,20,20,0.6);
+            border: 1px solid #1c1c1c;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        
+        .adicionar-caixa input {
+            flex: 1;
+            background-color: #0a0a0a;
+            border: 1px solid #333;
+            color: #fff;
+            padding: 10px;
+            font-family: inherit;
+            border-radius: 3px;
+        }
+        
+        .adicionar-caixa input:focus {
+            outline: none;
+            border-color: #ff0000;
+        }
+        
+        .adicionar-caixa button {
+            background-color: rgba(255,0,0,0.1);
+            color: #ff3333;
+            border: 1px solid rgba(255,0,0,0.3);
+            padding: 10px 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+            font-family: inherit;
+            text-transform: uppercase;
+        }
+        
+        .adicionar-caixa button:hover {
+            background-color: #ff0000;
+            color: #fff;
+            border-color: #ff0000;
+        }
+
+        .btn-apagar {
+            color: #ff3333;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-family: monospace;
+            border: 1px solid rgba(255,0,0,0.2);
+            padding: 2px 5px;
+            border-radius: 3px;
+            background: rgba(0,0,0,0.5);
+        }
+        
+        .btn-apagar:hover {
+            background: #ff0000;
+            color: #fff;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes counter-spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(-360deg); }
+        }
+
+        @keyframes title-pulse {
+            0% { transform: scale(1); text-shadow: 0 0 10px rgba(255,255,255,0.1), 3px 3px 0px #ff0000, -3px -3px 0px #000; }
+            100% { transform: scale(1.02); text-shadow: 0 0 20px rgba(255,0,0,0.4), 4px 4px 0px #ff0000, -4px -4px 0px #000; }
+        }
+
+        .audio-notice {
+            position: fixed;
+            bottom: 15px;
+            left: 15px;
+            font-size: 0.8rem;
+            color: #444;
+            z-index: 1000;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+
+    <audio id="bgMusic" loop>
+        <source src="musica_fundo.mp3" type="audio/mpeg">
+    </audio>
+
+    <canvas id="particleCanvas"></canvas>
+    <div class="audio-notice">Áudio: 'musica_fundo.mp3'</div>
+
+    <div id="loading-screen" class="screen active">
+        <div class="occult-sigil"></div>
+        <div class="loading-text" id="loading-text">Conectando com a Ordem...</div>
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+    </div>
+
+    <div id="intro-screen" class="screen">
+        <video class="video-container" id="introVideo" preload="auto">
+            <source src="video_intro.mp4" type="video/mp4">
+        </video>
+        <div class="video-fallback">
+            <h2>INICIANDO TRANSMISSÃO</h2>
+            <p>"A realidade está se rompendo. A membrana enfraquece a cada batida do seu coração."</p>
+        </div>
+        <button class="skip-btn" id="skip-intro-btn">Pular Introdução</button>
+    </div>
+
+    <div id="start-screen" class="screen">
+        <h1 class="game-title">Ordem Paranormal</h1>
+        <div class="game-subtitle">Iniciação Investigativa</div>
+        <button class="btn-iniciar" id="btn-iniciar-jogo">Iniciar</button>
+    </div>
+
+    <div id="char-selection-screen" class="screen">
+        <h2 class="selection-title">Selecione seu Investigador</h2>
+        <div class="cards-container" id="cards-container"></div>
+        <button class="confirm-selection-btn" id="confirm-char-btn">Confirmar Investigador</button>
+    </div>
+
+    <div id="main-menu-screen" class="screen">
+        <div class="menu-layout">
+            <div class="menu-options-panel">
+                <button class="menu-btn active-tab" onclick="mudarAba('dashboard', this)">Dashboard da Missão</button>
+                <button class="menu-btn" onclick="mudarAba('arquivos', this)">Arquivos do Caso</button>
+                <button class="menu-btn" onclick="mudarAba('equipamentos', this)">Equipamentos & Itens</button>
+                <button class="menu-btn" onclick="mudarAba('rituais', this)">Rituais Conhecidos</button>
+                
+                <!-- BOTÃO DO MANUAL CORRIGIDO PARA USAR WINDOW.OPEN VIA CORRIDA EXTERNA -->
+                <button class="menu-btn" style="border-left-color: #9900ff; color: #b266ff;" onclick="window.open('manual_ordem_paranormal.pdf', '_blank')">Consultar Manual (PDF)</button>
+                
+                <!-- ALTERADO: AGORA VOLTA DIRETAMENTE PARA A TELA DE SELEÇÃO SEM DAR RELOAD -->
+                <button class="menu-btn" style="border-left-color: #ff3333; color: #e5e5e5;" onclick="voltarParaSelecao()">Trocar de Agente</button>
+            </div>
+
+            <div class="menu-dashboard-panel">
+                <div class="dashboard-header">
+                    <img src="" alt="Avatar" class="dashboard-avatar" id="dash-avatar">
+                    <div class="dashboard-title-info">
+                        <h2 id="dash-name">Nome do Investigador</h2>
+                        <p id="dash-quote">Frase de efeito</p>
+                    </div>
+                </div>
+                
+                <div class="dashboard-content">
+                    
+                    <div id="aba-dashboard" class="aba ativa">
+                        <div class="dash-section-title">Atributos Base</div>
+                        <div class="dash-attributes-grid" id="dash-attributes-container"></div>
+                        <div class="dash-section-title">Habilidades & Rituais Especiais</div>
+                        <div id="dash-abilities-container"></div>
+                    </div>
+
+                    <!-- SEÇÃO DE ARQUIVOS TOTALMENTE ARRUMADA COM O BOTÃO DINÂMICO -->
+                    <div id="aba-arquivos" class="aba">
+                        <div class="dash-section-title">Arquivos Coletados</div>
+                        
+                        <div style="padding: 25px; text-align: center; border: 1px solid #222; background: rgba(20,20,20,0.6); margin-top: 10px; border-radius: 4px;">
+                            <p style="color: #ff3333; font-family: 'Special Elite', monospace; margin-bottom: 15px; font-size: 1.1rem; letter-spacing: 1px;">
+                                [DOCUMENTO CONFIDENCIAL DETECTADO]
+                            </p>
+                            <p style="color: #aaa; font-size: 0.95rem; margin-bottom: 20px; font-family: inherit;">
+                                O arquivo de diretrizes e regras oficiais da Ordem está disponível para consulta dos agentes de campo.
+                            </p>
+                            <!-- Substitua o 'manual_ordem_paranormal.pdf' abaixo pelo seu link completo do Google Drive se preferir usar nuvem -->
+                            <button class="menu-btn" style="border-left-color: #ff0000; color: #fff; text-align: center; width: 100%; display: block; background: rgba(30,0,0,0.3);" 
+                                    onclick="window.open('manual_ordem_paranormal.pdf', '_blank')">
+                                ABRIR MANUAL DA ORDEM (PDF)
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="aba-equipamentos" class="aba">
+                        <div class="dash-section-title">Adicionar Item ao Inventário</div>
+                        <div class="adicionar-caixa">
+                            <input type="text" id="nome-equipamento" placeholder="Nome (Ex: Pistola, Bandagem)">
+                            <input type="text" id="detalhe-equipamento" placeholder="Efeito (Ex: 1d10, Ocupa 1 Espaço)">
+                            <button onclick="adicionarItemLocalStorage('equipamentos', 'nome-equipamento', 'detalhe-equipamento')">Adicionar</button>
+                        </div>
+                        
+                        <div class="dash-section-title">Itens de Campo</div>
+                        <div id="lista-equipamentos"></div>
+                    </div>
+
+                    <div id="aba-rituais" class="aba">
+                        <div class="dash-section-title">Anotar Novo Ritual</div>
+                        <div class="adicionar-caixa">
+                            <input type="text" id="nome-ritual" placeholder="Nome do Ritual (Ex: Decadência)">
+                            <input type="text" id="detalhe-ritual" placeholder="Efeito e Custo (Ex: 1 PE, Sangue, Dano...)">
+                            <button onclick="adicionarItemLocalStorage('rituais', 'nome-ritual', 'detalhe-ritual')">Adicionar</button>
+                        </div>
+                        
+                        <div class="dash-section-title">Conhecimento Oculto</div>
+                        <div id="lista-rituais"></div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // SISTEMA DE ABAS E LOCALSTORAGE (INDIVIDUAL)
+        // ==========================================
+        
+        window.mudarAba = function(nomeAba, elementoBtn) {
+            document.querySelectorAll('.aba').forEach(aba => aba.classList.remove('ativa'));
+            document.getElementById('aba-' + nomeAba).classList.add('ativa');
+
+            document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active-tab'));
+            if(elementoBtn) elementoBtn.classList.add('active-tab');
+        };
+
+        window.personagemAtualId = null; 
+        window.dadosPersonagem = { equipamentos: [], rituais: [] };
+
+        window.carregarDados = function(idPersonagem) {
+            window.personagemAtualId = idPersonagem;
+            
+            const dadosSalvos = localStorage.getItem('fichaOP_' + idPersonagem);
+            
+            if (dadosSalvos) {
+                window.dadosPersonagem = JSON.parse(dadosSalvos);
+            } else {
+                window.dadosPersonagem = { equipamentos: [], rituais: [] };
+            }
+            
+            window.renderizarLista('lista-equipamentos', window.dadosPersonagem.equipamentos, 'equipamentos');
+            window.renderizarLista('lista-rituais', window.dadosPersonagem.rituais, 'rituais');
+        };
+
+        window.salvarDados = function() {
+            if (window.personagemAtualId) {
+                localStorage.setItem('fichaOP_' + window.personagemAtualId, JSON.stringify(window.dadosPersonagem));
+            }
+        };
+
+        window.renderizarLista = function(idLista, arrayItens, tipo) {
+            let lista = document.getElementById(idLista);
+            if(!lista) return;
+            lista.innerHTML = ''; 
+
+            arrayItens.forEach((item, index) => {
+                let novoItem = document.createElement('div');
+                novoItem.className = 'ability-detail-card'; 
+                novoItem.innerHTML = `
+                    <div class="ability-detail-header">
+                        <span class="ability-detail-name" style="color: #ff3333;">${item.nome}</span>
+                        <span class="btn-apagar" onclick="removerItem('${tipo}', ${index})">Excluir</span>
+                    </div>
+                    <p class="ability-detail-desc">${item.detalhe}</p>
+                `;
+                lista.appendChild(novoItem);
+            });
+        };
+
+        window.adicionarItemLocalStorage = function(tipo, idInputNome, idInputDetalhe) {
+            let inputNome = document.getElementById(idInputNome);
+            let inputDetalhe = document.getElementById(idInputDetalhe);
+
+            let nome = inputNome.value.trim();
+            let detalhe = inputDetalhe.value.trim();
+
+            if (nome !== "") {
+                window.dadosPersonagem[tipo].push({ nome: nome, detalhe: detalhe });
+                window.salvarDados(); 
+                window.renderizarLista(`lista-${tipo}`, window.dadosPersonagem[tipo], tipo);
+
+                inputNome.value = "";
+                inputDetalhe.value = "";
+            } else {
+                alert("Preencha ao menos o nome para adicionar!");
+            }
+        };
+
+        window.removerItem = function(tipo, index) {
+            window.dadosPersonagem[tipo].splice(index, 1);
+            window.salvarDados(); 
+            window.renderizarLista(`lista-${tipo}`, window.dadosPersonagem[tipo], tipo);
+        };
+
+        // Transiciona de volta para a tela de seleção sem recarregar a página
+        window.voltarParaSelecao = function() {
+            const mainMenuScreen = document.getElementById('main-menu-screen');
+            const charSelectionScreen = document.getElementById('char-selection-screen');
+            
+            if (mainMenuScreen) mainMenuScreen.classList.remove('active');
+            if (charSelectionScreen) charSelectionScreen.classList.add('active');
+        };
+
+        // ==========================================
+        // CÓDIGO ORIGINAL (PERSONAGENS, VÍDEO, ETC)
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            const characters = [
+                {
+                    id: "diego",
+                    name: "Diego Yaotl",
+                    quote: "Nunca subestime o filho de Xaotl Tonari",
+                    image: "./img/1.png",
+                    attributes: { AGI: 2, INT: 1, VIG: 2, PRE: 2, FOR: 3 },
+                    abilities: [
+                        { name: "A Sentença da Marca", cost: "3 PD", desc: "Você marca um inimigo com a sua marca do sol incompleto. Você ganha +5 em testes contra esse alvo." },
+                        { name: "Ensinamentos Sacerdotais", cost: "Passiva", desc: "Com uma ação de interlúdio estudando as fraquezas de um ser. Para isso, você precisa de uma pista ligada ao ser (parte do seu corpo, vestes etc...). Ao fim dos estudos, você recebe uma informação sobre o ser, podendo ser uma characteristic ou um hábito." },
+                        { name: "Macuahuitl", cost: "2 PD", desc: "Ao acertar um ataque é possível deixar o alvo com o efeito apagado, causando 1d6 de dano por rodada. Este efeito acumula até 3 vezes (Vontade DT 15 + PRE do alvo evita condição)." }
+                    ]
+                },
+                {
+                    id: "victor",
+                    name: "Víctor",
+                    quote: "Dilacere-se, permita que o próprio sangue narre quem você é",
+                    image: "./img/2.png",
+                    attributes: { AGI: 3, INT: 3, VIG: 1, PRE: 1, FOR: 2 },
+                    abilities: [
+                        { name: "Ceifar em Silêncio", cost: "2 PD", desc: "Quando atinge um alvo com um ataque desprevenido ou que esteja flanqueado, o usuário pode causar +3d8 de dano." },
+                        { name: "Rito Sepulcral", cost: "3 PD", desc: "O usuário pode preparar a área queimando incensos egípcios. Nessa área purificada o usuário recebe +5 em testes de ataque e não sofre penalidade em furtividade." },
+                        { name: "Adagas Vampíricas", cost: "3 PD", desc: "Você pode armazenar em suas adagas 10% do dano que causar. Posteriormente, pode usar esse poder para se curar como ação completa." }
+                    ]
+                },
+                {
+                    id: "michael",
+                    name: "Michael",
+                    quote: "Entre todas as defesas, as máscaras são a mais eficaz",
+                    image: "./img/3.png",
+                    attributes: { AGI: 3, INT: 3, VIG: 1, PRE: 2, FOR: 1 },
+                    abilities: [
+                        { name: "Troca de Figurino", cost: "2 PD", desc: "Você sabe como se disfarçar rapidamente, usando pequenos detalhes para alterar sua aparência. Pode se disfarçar como ação completa." },
+                        { name: "Precisão Sanguinária", cost: "3 PD", desc: "Suas balas agem como uma criatura que almeja a captura da presa. Você recebe +2 na sua margem de ameaça." },
+                        { name: "Fuzil Carmim", cost: "Efeito", desc: "Ao atirar com seu rifle, uma bala sanguinária sai de dentro da arma. Ao reduzir o PV de um ser a 0, ele fica em estado morrendo por dois turnos." }
+                    ]
+                }
+            ];
+
+            let selectedCharacter = null;
+
+            // ANIMATED PARTICLES (CANVAS)
+            const canvas = document.getElementById('particleCanvas');
+            const ctx = canvas ? canvas.getContext('2d') : null;
+            let particles = [];
+
+            function resizeCanvas() {
+                if (canvas) {
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight;
+                }
+            }
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+
+            class Particle {
+                constructor() { 
+                    this.reset(); 
+                    if (canvas) this.y = Math.random() * canvas.height; 
+                }
+                reset() {
+                    if (canvas) {
+                        this.x = Math.random() * canvas.width;
+                        this.y = canvas.height + Math.random() * 20;
+                    }
+                    this.size = Math.random() * 2.5 + 0.8;
+                    this.speedY = Math.random() * -1.2 - 0.4;
+                    this.speedX = Math.random() * 0.6 - 0.3;
+                    this.opacity = Math.random() * 0.6 + 0.1;
+                }
+                update() {
+                    this.y += this.speedY;
+                    this.x += this.speedX;
+                    if (this.y < -10 || this.opacity <= 0) this.reset();
+                }
+                draw() {
+                    if (!ctx) return;
+                    ctx.fillStyle = `rgba(170, 0, 0, ${this.opacity})`;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            function initParticles() {
+                if (!canvas) return;
+                for (let i = 0; i < 100; i++) particles.push(new Particle());
+            }
+            function animateParticles() {
+                if (!ctx || !canvas) return;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                particles.forEach(p => { p.update(); p.draw(); });
+                requestAnimationFrame(animateParticles);
+            }
+            initParticles();
+            animateParticles();
+
+            // FLOW MANAGEMENT
+            const loadingScreen = document.getElementById('loading-screen');
+            const introScreen = document.getElementById('intro-screen');
+            const startScreen = document.getElementById('start-screen');
+            const charSelectionScreen = document.getElementById('char-selection-screen');
+            const mainMenuScreen = document.getElementById('main-menu-screen');
+            const progressBar = document.getElementById('progress-bar');
+            const loadingText = document.getElementById('loading-text');
+            const introVideo = document.getElementById('introVideo');
+            const bgMusic = document.getElementById('bgMusic');
+            const skipIntroBtn = document.getElementById('skip-intro-btn');
+            const btnIniciarJogo = document.getElementById('btn-iniciar-jogo');
+
+            const loadingPhrases = [
+                "Conectando com a Ordem...",
+                "Analisando registros da Membrana...",
+                "Estabilizando névoa paranormal...",
+                "Decodificando símbolos ocultistas...",
+                "Quase lá. Prepare sua mente..."
+            ];
+
+            let progress = 0;
+            let phraseIndex = 0;
+            
+            const phraseInterval = setInterval(() => {
+                if (loadingText) {
+                    phraseIndex = (phraseIndex + 1) % loadingPhrases.length;
+                    loadingText.innerText = loadingPhrases[phraseIndex];
+                }
+            }, 800);
+
+            const progressInterval = setInterval(() => {
+                progress += Math.random() * 4;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(progressInterval);
+                    clearInterval(phraseInterval);
+                    setTimeout(finishLoading, 500);
+                }
+                if (progressBar) progressBar.style.width = `${progress}%`;
+            }, 80);
+
+            function finishLoading() {
+                if (loadingScreen) loadingScreen.classList.remove('active');
+                if (introScreen) introScreen.classList.add('active');
+                if (introVideo) {
+                    introVideo.play().catch(() => console.log("Vídeo bloqueado pelo navegador até interação."));
+                }
+            }
+
+            function transitionToStartScreen() {
+                if (introVideo) introVideo.pause();
+                if (introScreen) introScreen.classList.remove('active');
+                if (startScreen) startScreen.classList.add('active');
+            }
+
+            if (skipIntroBtn) {
+                skipIntroBtn.addEventListener('click', () => { 
+                    transitionToStartScreen(); 
+                    playBackgroundMusic(); 
+                });
+            }
+            
+            if (introVideo) {
+                introVideo.addEventListener('ended', () => { 
+                    transitionToStartScreen(); 
+                    playBackgroundMusic(); 
+                });
+            }
+
+            function playBackgroundMusic() {
+                if (bgMusic) {
+                    bgMusic.volume = 0.4;
+                    bgMusic.play().catch(() => console.log("Áudio aguardando ação definitiva do usuário."));
+                }
+            }
+
+            if (btnIniciarJogo) {
+                btnIniciarJogo.addEventListener('click', () => {
+                    playBackgroundMusic();
+                    if (startScreen) startScreen.classList.remove('active');
+                    if (charSelectionScreen) charSelectionScreen.classList.add('active');
+                });
+            }
+
+            // CHARACTER CARD BUILDER
+            const cardsContainer = document.getElementById('cards-container');
+            const confirmCharBtn = document.getElementById('confirm-char-btn');
+
+            function buildCharacterCards() {
+                if (!cardsContainer) return;
+                characters.forEach(char => {
+                    const card = document.createElement('div');
+                    card.className = 'char-card';
+                    card.dataset.id = char.id;
+
+                    let attrHtml = '';
+                    for (const [key, val] of Object.entries(char.attributes)) {
+                        attrHtml += `
+                            <div class="attr-item">
+                                <span class="attr-label">${key}</span>
+                                <span class="attr-val">${val}</span>
+                            </div>
+                        `;
+                    }
+
+                    let abilitiesHtml = '';
+                    char.abilities.forEach(ab => {
+                        abilitiesHtml += `<div class="ability-tag">${ab.name}</div>`;
+                    });
+
+                    card.innerHTML = `
+                        <div class="char-img-wrapper">
+                            <img src="${char.image}" alt="${char.name}" class="char-img">
+                        </div>
+                        <div class="char-info">
+                            <h3 class="char-name">${char.name}</h3>
+                            <p class="char-quote">"${char.quote}"</p>
+                            <div class="attributes-preview">
+                                ${attrHtml}
+                            </div>
+                            <div class="char-summary">
+                                ${abilitiesHtml}
+                            </div>
+                        </div>
+                    `;
+
+                    card.addEventListener('click', () => {
+                        document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
+                        card.classList.add('selected');
+                        selectedCharacter = char;
+                        if (confirmCharBtn) confirmCharBtn.classList.add('ready');
+                    });
+
+                    cardsContainer.appendChild(card);
+                });
+            }
+
+            // CONFIRMAÇÃO DE SELEÇÃO
+            if (confirmCharBtn) {
+                confirmCharBtn.addEventListener('click', () => {
+                    if (!selectedCharacter) return;
+
+                    window.carregarDados(selectedCharacter.id);
+
+                    const dashAvatar = document.getElementById('dash-avatar');
+                    const dashName = document.getElementById('dash-name');
+                    const dashQuote = document.getElementById('dash-quote');
+
+                    if (dashAvatar) dashAvatar.src = selectedCharacter.image;
+                    if (dashName) dashName.innerText = selectedCharacter.name;
+                    if (dashQuote) dashQuote.innerText = `"${selectedCharacter.quote}"`;
+
+                    const dashAttributesContainer = document.getElementById('dash-attributes-container');
+                    if (dashAttributesContainer) {
+                        dashAttributesContainer.innerHTML = '';
+                        for (const [key, val] of Object.entries(selectedCharacter.attributes)) {
+                            dashAttributesContainer.innerHTML += `
+                                <div class="dash-attr-box">
+                                    <span class="num">${val}</span>
+                                    <span class="label">${key}</span>
+                                </div>
+                            `;
+                        }
+                    }
+
+                    const dashAbilitiesContainer = document.getElementById('dash-abilities-container');
+                    if (dashAbilitiesContainer) {
+                        dashAbilitiesContainer.innerHTML = '';
+                        selectedCharacter.abilities.forEach(ab => {
+                            dashAbilitiesContainer.innerHTML += `
+                                <div class="ability-detail-card">
+                                    <div class="ability-detail-header">
+                                        <span class="ability-detail-name">${ab.name}</span>
+                                        <span class="ability-detail-cost">${ab.cost}</span>
+                                    </div>
+                                    <p class="ability-detail-desc">${ab.desc}</p>
+                                </div>
+                            `;
+                        });
+                    }
+
+                    window.mudarAba('dashboard', document.querySelector('.menu-btn'));
+
+                    if (charSelectionScreen) charSelectionScreen.classList.remove('active');
+                    if (mainMenuScreen) mainMenuScreen.classList.add('active');
+                });
+            }
+
+            buildCharacterCards();
+        });
+    </script>
+</body>
+</html>
